@@ -74,11 +74,17 @@ Cada vez que cambies algo en GitHub, Vercel vuelve a publicar solo.
 
 1. El **anfitrión** crea la sala y comparte el código (o el link) por WhatsApp.
 2. Cada invitado entra, pone su nombre y elige avatar.
-3. El anfitrión lanza primero **🎲 La apuesta** para que todos apuesten el género.
-4. Va lanzando los demás juegos en el orden que quiera; el ranking se va sumando.
-5. Para cerrar: **🎊 Gran Revelación** → el anfitrión revela y se reparte el bono.
+3. El anfitrión toca **▶️ Empezar la fiesta** y la app hace todo sola:
+   - primero todos hacen su **apuesta** del género (con cuenta regresiva),
+   - luego salen **15 mini-juegos al azar**, uno tras otro,
+   - **antes de cada juego** aparece una pantalla de "cómo se juega" con su cuenta regresiva, para que todos sepan qué hacer,
+   - cada juego avanza solo, muestra resultados y sigue al siguiente,
+   - al final llega la **Gran Revelación**: el anfitrión toca la respuesta real y se reparte el bono.
+4. Como todo avanza solo, **el anfitrión también juega**. Solo le queda una barrita con ⏭️ Saltar y 🎊 Revelación por si quiere brincar algo.
 
-El que crea la sala es el anfitrión y manda. Si recarga la página sigue siendo anfitrión (su identidad se guarda en el dispositivo).
+¿Prefieres control total? En el hub hay un "▼ lanzar los juegos a mano" que despliega el modo manual (lanzas cada juego y avanzas tú).
+
+El que crea la sala es el anfitrión y su teléfono es el que dirige la fiesta. Si recarga la página sigue siendo anfitrión y la fiesta se retoma sola.
 
 ---
 

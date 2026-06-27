@@ -2,12 +2,22 @@ import { useEffect, useRef } from 'react';
 import { useStorage, useMutation } from '@liveblocks/react';
 import {
   computeDeltas,
+  computeStepDeltas,
+  buildPlaylist,
+  hangmanState,
   leaderboard,
   colorOf,
   sampleIndices,
   GENDER_BONUS,
   TRIVIA_SECONDS,
   DRAW_SECONDS,
+  MOSTLIKELY_SECONDS,
+  BET_SECONDS,
+  INTRO_SECONDS,
+  RESULT_SECONDS,
+  DRAW_RESULT_SECONDS,
+  HANG_RESULT_SECONDS,
+  PARTY_GAMES,
 } from './lib/game';
 import { GENDER, TRIVIA, MOSTLIKELY, HANGMAN_WORDS, DRAW_WORDS } from './lib/content';
 import { Sound } from './lib/sound';
@@ -15,6 +25,7 @@ import { fireConfetti } from './lib/confetti';
 
 import Join from './screens/Join';
 import Hub from './screens/Hub';
+import Intro from './screens/Intro';
 import Bet from './screens/Bet';
 import Trivia from './screens/Trivia';
 import MostLikely from './screens/MostLikely';
@@ -22,7 +33,7 @@ import Hangman from './screens/Hangman';
 import Draw from './screens/Draw';
 import Reveal from './screens/Reveal';
 
-// Helpers sobre estructuras Live (se usan dentro de mutaciones).
+// ---- Helpers sobre estructuras Live (se usan dentro de mutaciones) ----
 function snapMap(m) {
   const o = {};
   m.forEach((v, k) => {
@@ -37,6 +48,80 @@ function clearMap(m) {
   const ks = [];
   m.forEach((_, k) => ks.push(k));
   ks.forEach((k) => m.delete(k));
+}
+function clearTransient(storage) {
+  clearList(storage.get('segments'));
+  clearList(storage.get('guesses'));
+  clearList(storage.get('letters'));
+  clearMap(storage.get('answers'));
+}
+
+// Arranca un mini-juego del playlist (modo fiesta). idx fuera de rango => revelación.
+// Empieza con una pantalla de "cómo se juega" (fase 'intro') y luego beginPlay().
+function startSegment(g, storage, idx) {
+  const playlist = g.get('playlist') || [];
+  if (idx >= playlist.length) {
+    g.update({ screen: 'reveal', phase: 'pending', timerEnd: null, resultEnd: null });
+    return;
+  }
+  const seg = playlist[idx];
+  const inst = (g.get('instance') || 0) + 1;
+  clearTransient(storage);
+  const base = {
+    screen: seg.t,
+    step: idx,
+    instance: inst,
+    round: 0,
+    rounds: 1,
+    contentIndex: seg.ci,
+    drawerId: null,
+    resultEnd: null,
+    phase: 'intro',
+    timerEnd: Date.now() + INTRO_SECONDS * 1000,
+  };
+  if (seg.t === 'draw') {
+    const ids = Array.from(storage.get('players').keys());
+    const turn = g.get('drawTurn') || 0;
+    base.drawerId = ids.length ? ids[turn % ids.length] : null;
+    g.set('drawTurn', turn + 1);
+  }
+  g.update(base);
+}
+
+// Termina la intro y arranca el juego con su cronómetro.
+function beginPlay(g) {
+  const screen = g.get('screen');
+  if (screen === 'trivia') g.update({ phase: 'q', timerEnd: Date.now() + TRIVIA_SECONDS * 1000 });
+  else if (screen === 'mostlikely') g.update({ phase: 'vote', timerEnd: Date.now() + MOSTLIKELY_SECONDS * 1000 });
+  else if (screen === 'hangman') g.update({ phase: 'play', timerEnd: Date.now() + 60 * 1000 });
+  else if (screen === 'draw') g.update({ phase: 'draw', timerEnd: Date.now() + DRAW_SECONDS * 1000 });
+}
+
+// Acredita los puntos de la ronda actual UNA sola vez (modo fiesta).
+function commitStep(g, storage) {
+  const step = g.get('step');
+  if (g.get('lastScored') === step) return;
+  const plain = {
+    type: g.get('screen'),
+    instance: g.get('instance'),
+    contentIndex: g.get('contentIndex'),
+    drawerId: g.get('drawerId'),
+    players: snapMap(storage.get('players')),
+    answers: snapMap(storage.get('answers')),
+    guesses: storage.get('guesses').toArray(),
+    letters: storage.get('letters').toArray(),
+  };
+  const deltas = computeStepDeltas(plain);
+  const pts = storage.get('points');
+  for (const id in deltas) pts.set(id, (pts.get(id) || 0) + deltas[id]);
+  g.set('lastScored', step);
+}
+
+function hangmanOverFrom(game, lettersList) {
+  const word = HANGMAN_WORDS[game.contentIndex] || '';
+  const letters = (lettersList || []).map((x) => ({ l: String(x.l).toUpperCase() }));
+  const st = hangmanState(word, letters);
+  return st.solved || st.lives <= 0;
 }
 
 function Loading({ text }) {
@@ -59,14 +144,28 @@ function NotFound({ onBack }) {
     </div>
   );
 }
+function PartyBar({ step, len, onSkip, onReveal }) {
+  return (
+    <div className="partybar">
+      <span className="pb-step">🎉 Juego {Math.min(step + 1, len)}/{len}</span>
+      <button className="pb-btn" onClick={onSkip}>
+        ⏭️ Saltar
+      </button>
+      <button className="pb-btn gold" onClick={onReveal}>
+        🎊 Revelación
+      </button>
+    </div>
+  );
+}
 
 export default function Room({ myId, wantHost, saved, onLeave }) {
   const game = useStorage((root) => root.game);
   const playersMap = useStorage((root) => root.players);
   const pointsMap = useStorage((root) => root.points);
   const betsMap = useStorage((root) => root.bets);
+  const lettersForEngine = useStorage((root) => root.letters);
 
-  // ---------- mutaciones ----------
+  // ---------- mutaciones (modo manual) ----------
   const join = useMutation(
     ({ storage }, name, avatar) => {
       const g = storage.get('game');
@@ -80,11 +179,8 @@ export default function Room({ myId, wantHost, saved, onLeave }) {
   const startGame = useMutation(({ storage }, screen) => {
     const g = storage.get('game');
     const inst = (g.get('instance') || 0) + 1;
-    clearList(storage.get('segments'));
-    clearList(storage.get('guesses'));
-    clearList(storage.get('letters'));
-    g.update({ screen, instance: inst, round: 0, awarded: false, revealed: null, timerEnd: null, drawerId: null, order: [], contentIndex: 0, rounds: 1, phase: 'idle' });
-
+    clearTransient(storage);
+    g.update({ mode: 'manual', screen, instance: inst, round: 0, awarded: false, revealed: null, timerEnd: null, resultEnd: null, drawerId: null, order: [], contentIndex: 0, rounds: 1, phase: 'idle' });
     if (screen === 'bet') {
       g.set('phase', 'open');
     } else if (screen === 'trivia') {
@@ -112,7 +208,6 @@ export default function Room({ myId, wantHost, saved, onLeave }) {
     },
     [myId]
   );
-
   const placeBet = useMutation(({ storage }, opt) => storage.get('bets').set(myId, opt), [myId]);
 
   const triviaShowResult = useMutation(({ storage }) => {
@@ -161,7 +256,6 @@ export default function Room({ myId, wantHost, saved, onLeave }) {
     },
     [myId]
   );
-
   const drawNext = useMutation(({ storage }) => {
     const g = storage.get('game');
     const round = g.get('round') + 1;
@@ -194,7 +288,7 @@ export default function Room({ myId, wantHost, saved, onLeave }) {
 
   const goReveal = useMutation(({ storage }) => {
     const g = storage.get('game');
-    g.update({ screen: 'reveal', phase: g.get('revealed') ? 'done' : 'pending', timerEnd: null });
+    g.update({ screen: 'reveal', phase: g.get('revealed') ? 'done' : 'pending', timerEnd: null, resultEnd: null });
   }, []);
   const revealGender = useMutation(({ storage }, opt) => {
     const g = storage.get('game');
@@ -204,27 +298,107 @@ export default function Room({ myId, wantHost, saved, onLeave }) {
     const pts = storage.get('points');
     for (const id in bets) if (bets[id] === opt) pts.set(id, (pts.get(id) || 0) + GENDER_BONUS);
   }, []);
-  const backToHub = useMutation(({ storage }) => storage.get('game').update({ screen: 'hub', phase: 'idle', timerEnd: null }), []);
+  const backToHub = useMutation(({ storage }) => storage.get('game').update({ mode: 'manual', screen: 'hub', phase: 'idle', timerEnd: null, resultEnd: null }), []);
   const resetParty = useMutation(({ storage }) => {
     const pts = storage.get('points');
     const pk = [];
     pts.forEach((_, k) => pk.push(k));
     pk.forEach((k) => pts.set(k, 0));
     clearMap(storage.get('bets'));
-    clearMap(storage.get('answers'));
-    clearList(storage.get('segments'));
-    clearList(storage.get('guesses'));
-    clearList(storage.get('letters'));
-    storage.get('game').update({ screen: 'hub', phase: 'idle', revealed: null, awarded: true, round: 0, rounds: 0 });
+    clearTransient(storage);
+    storage.get('game').update({ mode: 'manual', screen: 'hub', phase: 'idle', revealed: null, awarded: true, round: 0, rounds: 0, step: 0, lastScored: -1 });
   }, []);
 
-  // ---------- efectos: audio + confetti en transiciones ----------
-  const fxKey = useRef('');
+  // ---------- mutaciones (modo fiesta) ----------
+  const setParents = useMutation(({ storage }, dad, mom) => {
+    storage.get('game').update({ dad: (dad || '').slice(0, 24), mom: (mom || '').slice(0, 24) });
+  }, []);
+
+  const startParty = useMutation(({ storage }, dad, mom) => {
+    const g = storage.get('game');
+    const playlist = buildPlaylist(PARTY_GAMES);
+    clearTransient(storage);
+    const pts = storage.get('points');
+    const ks = [];
+    pts.forEach((_, k) => ks.push(k));
+    ks.forEach((k) => pts.set(k, 0));
+    clearMap(storage.get('bets'));
+    g.update({
+      mode: 'party',
+      dad: (dad || g.get('dad') || '').slice(0, 24),
+      mom: (mom || g.get('mom') || '').slice(0, 24),
+      playlist,
+      playlistLen: playlist.length,
+      step: 0,
+      drawTurn: 0,
+      lastScored: -1,
+      revealed: null,
+      awarded: true,
+      screen: 'bet',
+      phase: 'open',
+      timerEnd: Date.now() + BET_SECONDS * 1000,
+      resultEnd: null,
+      instance: (g.get('instance') || 0) + 1,
+    });
+  }, []);
+
+  // Motor: avanza fases del modo fiesta. Idempotente (revisa estado actual).
+  const partyTransition = useMutation(({ storage }) => {
+    const g = storage.get('game');
+    if (g.get('mode') !== 'party') return;
+    const screen = g.get('screen');
+    const phase = g.get('phase');
+    if (screen === 'bet') {
+      startSegment(g, storage, 0);
+      return;
+    }
+    if (phase === 'intro') {
+      beginPlay(g);
+      return;
+    }
+    if (phase === 'result') {
+      startSegment(g, storage, g.get('step') + 1);
+      return;
+    }
+    // fin de la fase de juego -> acreditar puntos y mostrar resultados
+    if (screen === 'trivia' && phase === 'q') {
+      commitStep(g, storage);
+      g.update({ phase: 'result', resultEnd: Date.now() + RESULT_SECONDS * 1000 });
+    } else if (screen === 'mostlikely' && phase === 'vote') {
+      commitStep(g, storage);
+      g.update({ phase: 'result', resultEnd: Date.now() + RESULT_SECONDS * 1000 });
+    } else if (screen === 'draw' && phase === 'draw') {
+      commitStep(g, storage);
+      g.update({ phase: 'result', resultEnd: Date.now() + DRAW_RESULT_SECONDS * 1000 });
+    } else if (screen === 'hangman' && phase === 'play') {
+      commitStep(g, storage);
+      g.update({ phase: 'result', resultEnd: Date.now() + HANG_RESULT_SECONDS * 1000 });
+    }
+  }, []);
+
+  const partySkip = useMutation(({ storage }) => {
+    const g = storage.get('game');
+    if (g.get('mode') !== 'party') return;
+    if (g.get('screen') === 'bet') startSegment(g, storage, 0);
+    else startSegment(g, storage, g.get('step') + 1);
+  }, []);
+  const partyToReveal = useMutation(({ storage }) => {
+    const g = storage.get('game');
+    g.update({ screen: 'reveal', phase: g.get('revealed') ? 'done' : 'pending', timerEnd: null, resultEnd: null });
+  }, []);
+
+  // ---------- derivados ----------
+  const isHost = game ? game.hostId === myId : false;
+  const hangmanOver = game && game.screen === 'hangman' && game.phase === 'play' ? hangmanOverFrom(game, lettersForEngine) : false;
+
+  // ---------- efectos ----------
   useEffect(() => {
     const h = () => Sound.unlock();
     window.addEventListener('pointerdown', h);
     return () => window.removeEventListener('pointerdown', h);
   }, []);
+
+  const fxKey = useRef('');
   useEffect(() => {
     if (!game) return;
     if ((game.screen === 'trivia' || game.screen === 'mostlikely') && game.phase === 'result') {
@@ -246,17 +420,34 @@ export default function Room({ myId, wantHost, saved, onLeave }) {
     }
   }, [game]);
 
+  // Motor del modo fiesta: solo el anfitrión programa las transiciones.
+  useEffect(() => {
+    if (!isHost || !game || game.mode !== 'party') return;
+    if (game.screen === 'hangman' && game.phase === 'play') {
+      if (hangmanOver) {
+        const id = setTimeout(() => partyTransition(), 700);
+        return () => clearTimeout(id);
+      }
+      // si no terminó, cae al límite de tiempo de seguridad (timerEnd) de abajo
+    }
+    const deadline = game.phase === 'result' ? game.resultEnd : game.timerEnd;
+    if (!deadline) return;
+    const ms = Math.max(0, deadline - Date.now());
+    const id = setTimeout(() => partyTransition(), ms + 80);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line
+  }, [isHost, game && game.mode, game && game.screen, game && game.phase, game && game.timerEnd, game && game.resultEnd, game && game.step, hangmanOver]);
+
   // ---------- ruteo ----------
   if (game == null || playersMap == null) return <Loading text="Conectando a la sala…" />;
 
-  const players = playersMap ? Array.from(playersMap, ([id, v]) => ({ id, ...v })) : [];
-  const playersObj = Object.fromEntries(playersMap || []);
+  const players = Array.from(playersMap, ([id, v]) => ({ id, ...v }));
+  const playersObj = Object.fromEntries(playersMap);
   const points = pointsMap ? Object.fromEntries(pointsMap) : {};
   const board = leaderboard(playersObj, points);
   const betsObj = Object.fromEntries(betsMap || []);
   const betsCount = betsMap ? betsMap.size : 0;
   const me = playersMap.get(myId);
-  const isHost = game.hostId === myId;
 
   if (!wantHost && game.hostId == null && !me) return <NotFound onBack={onLeave} />;
 
@@ -272,7 +463,7 @@ export default function Room({ myId, wantHost, saved, onLeave }) {
   }
 
   const actions = {
-    startGame, finishGame, submitAnswer, placeBet,
+    startGame, startParty, setParents, finishGame, submitAnswer, placeBet,
     triviaShowResult, triviaBack, triviaNext,
     mlShowResult, mlBack, mlNext,
     guessLetter, pushSegment, clearCanvas, guessDraw, drawNext,
@@ -280,23 +471,41 @@ export default function Room({ myId, wantHost, saved, onLeave }) {
   };
   const common = { game, players, board, myId, isHost, actions };
 
-  switch (game.screen) {
+  let el;
+  if (game.mode === 'party' && game.phase === 'intro') {
+    el = <Intro game={game} players={players} myId={myId} isHost={isHost} onBegin={partyTransition} />;
+  } else
+    switch (game.screen) {
     case 'bet':
-      return <Bet {...common} bets={betsObj} />;
+      el = <Bet {...common} bets={betsObj} />;
+      break;
     case 'trivia':
-      return <Trivia {...common} />;
+      el = <Trivia {...common} />;
+      break;
     case 'mostlikely':
-      return <MostLikely {...common} />;
+      el = <MostLikely {...common} />;
+      break;
     case 'hangman':
-      return <Hangman {...common} />;
+      el = <Hangman {...common} />;
+      break;
     case 'draw':
-      return <Draw {...common} />;
+      el = <Draw {...common} />;
+      break;
     case 'reveal':
-      return <Reveal {...common} />;
+      el = <Reveal {...common} />;
+      break;
     case 'hub':
     default:
-      return <Hub {...common} roomCode={roomCodeFromUrl()} betsCount={betsCount} />;
+      el = <Hub {...common} roomCode={roomCodeFromUrl()} betsCount={betsCount} />;
   }
+
+  const showPartyBar = isHost && game.mode === 'party' && game.screen !== 'reveal';
+  return (
+    <>
+      {el}
+      {showPartyBar && <PartyBar step={game.step} len={game.playlistLen} onSkip={partySkip} onReveal={partyToReveal} />}
+    </>
+  );
 }
 
 function roomCodeFromUrl() {

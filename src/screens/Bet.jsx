@@ -1,9 +1,12 @@
 import { GENDER } from '../lib/content';
+import { BET_SECONDS } from '../lib/game';
+import TimerRing from '../components/TimerRing';
 import { Sound } from '../lib/sound';
 
-export default function Bet({ players, bets, myId, isHost, actions }) {
+export default function Bet({ game, players, bets, myId, isHost, actions }) {
   const myBet = bets[myId];
   const count = Object.keys(bets).length;
+  const party = game && game.mode === 'party';
 
   return (
     <div style={{ paddingTop: 28 }}>
@@ -16,6 +19,12 @@ export default function Bet({ players, bets, myId, isHost, actions }) {
           ¿Qué crees que será? Tu apuesta queda guardada hasta la Gran Revelación. Le atinas = <b>+3 puntos</b>.
         </p>
       </div>
+
+      {party && (
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12 }}>
+          <TimerRing endsAt={game.timerEnd} total={BET_SECONDS} runKey={'bet'} />
+        </div>
+      )}
 
       <div style={{ marginTop: 18 }}>
         {GENDER.options.map((o) => (
@@ -42,7 +51,13 @@ export default function Bet({ players, bets, myId, isHost, actions }) {
         </span>
       </div>
 
-      {isHost && (
+      {party && (
+        <p className="muted" style={{ textAlign: 'center', marginTop: 14, fontWeight: 700 }}>
+          Empiezan los juegos cuando acabe el tiempo… 🎮
+        </p>
+      )}
+
+      {isHost && !party && (
         <div className="hostbar">
           <div className="tag">⚙ Anfitrión</div>
           <button className="btn btn-primary full" onClick={() => actions.finishGame()}>

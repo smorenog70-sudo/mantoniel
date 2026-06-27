@@ -28,6 +28,17 @@ export function makeInitialStorage() {
       drawerId: null,
       timerEnd: null,
       revealed: null,
+      // protagonistas (papás)
+      dad: '',
+      mom: '',
+      // modo fiesta (secuencia automática de juegos)
+      mode: 'manual',
+      playlist: [],
+      playlistLen: 0,
+      step: 0,
+      resultEnd: null,
+      drawTurn: 0,
+      lastScored: -1,
     }),
     players: new LiveMap(),
     points: new LiveMap(),

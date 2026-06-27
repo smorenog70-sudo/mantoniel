@@ -640,3 +640,85 @@ input.txt {
 .mt8 {
   margin-top: 8px;
 }
+
+/* barra de control del modo fiesta (anfitrión) */
+.partybar {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 14px;
+  z-index: 56;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(20, 14, 40, 0.9);
+  border: 2px solid rgba(255, 201, 77, 0.4);
+  border-radius: 999px;
+  padding: 8px 10px 8px 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  max-width: calc(100vw - 24px);
+}
+.partybar .pb-step {
+  color: var(--gold);
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.partybar .pb-btn {
+  border: none;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 12.5px;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  white-space: nowrap;
+}
+.partybar .pb-btn.gold {
+  background: var(--gold);
+  color: var(--ink);
+}
+.partybar .pb-btn:active {
+  transform: scale(0.96);
+}
+
+/* pantalla "cómo se juega" (intro de cada mini-juego en modo fiesta) */
+.introbox {
+  background: var(--cream);
+  color: var(--ink);
+  border-radius: 26px;
+  padding: 26px 22px;
+  text-align: center;
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: popIn 0.5s cubic-bezier(0.2, 1.1, 0.3, 1) both;
+}
+.intro-emoji {
+  font-size: 72px;
+  line-height: 1;
+  margin: 10px 0 2px;
+  animation: wob 3s ease-in-out infinite;
+}
+.intro-how {
+  color: #5a546b;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.4;
+  max-width: 330px;
+  margin: 4px auto 0;
+}
+.intro-draw {
+  margin-top: 12px;
+  background: #fff6e0;
+  border: 2px solid rgba(255, 201, 77, 0.5);
+  color: var(--ink);
+  font-weight: 800;
+  border-radius: 14px;
+  padding: 9px 14px;
+  font-size: 14px;
+}

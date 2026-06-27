@@ -1,8 +1,9 @@
 import { useStorage } from '@liveblocks/react';
 import Leaderboard from '../components/Leaderboard';
 import PlayersRow from '../components/PlayersRow';
+import TimerRing from '../components/TimerRing';
 import { MOSTLIKELY } from '../lib/content';
-import { tally, maxKey } from '../lib/game';
+import { tally, maxKey, MOSTLIKELY_SECONDS } from '../lib/game';
 import { Sound } from '../lib/sound';
 
 function roundAnswers(map, instance, round) {
@@ -33,10 +34,15 @@ export default function MostLikely({ game, players, board, myId, isHost, actions
   if (!isResult) {
     return (
       <div style={{ paddingTop: 24 }}>
-        <div className="chips">
-          <span className="chip" style={{ cursor: 'default' }}>
-            🤔 {game.round + 1} de {game.rounds}
-          </span>
+        <div className="topbar">
+          <div className="chips">
+            <span className="chip" style={{ cursor: 'default' }}>
+              🤔 {game.mode === 'party' ? `Juego ${game.step + 1}/${game.playlistLen}` : `${game.round + 1} de ${game.rounds}`}
+            </span>
+          </div>
+          {game.mode === 'party' && (
+            <TimerRing endsAt={game.timerEnd} total={MOSTLIKELY_SECONDS} runKey={game.instance + ':' + game.round} />
+          )}
         </div>
         <h2 className="resq display" style={{ marginTop: 16 }}>
           {prompt}
@@ -58,7 +64,7 @@ export default function MostLikely({ game, players, board, myId, isHost, actions
             🟢 <b>{voted}</b>&nbsp;de {players.length} ya votaron
           </span>
         </div>
-        {isHost && (
+        {isHost && game.mode !== 'party' && (
           <div className="hostbar">
             <div className="tag">⚙ Anfitrión</div>
             <div className="row">
@@ -109,7 +115,7 @@ export default function MostLikely({ game, players, board, myId, isHost, actions
         </div>
       </div>
       <Leaderboard board={board} myId={myId} mode="mini" title="🏆 Ranking de la fiesta" />
-      {isHost && (
+      {isHost && game.mode !== 'party' && (
         <div className="hostbar">
           <div className="tag">⚙ Anfitrión</div>
           <div className="row">

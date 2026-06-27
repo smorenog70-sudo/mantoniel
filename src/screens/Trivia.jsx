@@ -3,7 +3,7 @@ import { useStorage } from '@liveblocks/react';
 import TimerRing from '../components/TimerRing';
 import Leaderboard from '../components/Leaderboard';
 import { TRIVIA } from '../lib/content';
-import { tally, maxKey, labelOf, colorOf, TRIVIA_SECONDS } from '../lib/game';
+import { tally, maxKey, labelOf, colorOf, TRIVIA_SECONDS, fill } from '../lib/game';
 import { Sound } from '../lib/sound';
 
 function roundAnswers(map, instance, round) {
@@ -46,7 +46,10 @@ function Bar({ o, n, pct, voters, win }) {
 
 export default function Trivia({ game, players, board, myId, isHost, actions }) {
   const answersMap = useStorage((root) => root.answers);
-  const q = TRIVIA[game.contentIndex];
+  const q0 = TRIVIA[game.contentIndex];
+  const q = q0
+    ? { text: fill(q0.text, game.dad, game.mom), options: q0.options.map((o) => ({ ...o, label: fill(o.label, game.dad, game.mom) })) }
+    : null;
   const pmap = {};
   players.forEach((p) => (pmap[p.id] = p));
   const ans = roundAnswers(answersMap, game.instance, game.round);
@@ -68,14 +71,14 @@ export default function Trivia({ game, players, board, myId, isHost, actions }) 
         <div className="topbar">
           <div className="chips">
             <span className="chip" style={{ cursor: 'default' }}>
-              🎯 {game.round + 1} de {game.rounds}
+              🎯 {game.mode === 'party' ? `Juego ${game.step + 1}/${game.playlistLen}` : `${game.round + 1} de ${game.rounds}`}
             </span>
           </div>
           <TimerRing
             endsAt={game.timerEnd}
             total={TRIVIA_SECONDS}
             runKey={game.instance + ':' + game.round}
-            onEnd={isHost ? actions.triviaShowResult : undefined}
+            onEnd={isHost && game.mode !== 'party' ? actions.triviaShowResult : undefined}
           />
         </div>
         <div className="progress" style={{ marginTop: 10 }}>
@@ -107,7 +110,7 @@ export default function Trivia({ game, players, board, myId, isHost, actions }) 
             🟢 <b>{answered}</b>&nbsp;de {players.length} ya respondieron
           </span>
         </div>
-        {isHost && (
+        {isHost && game.mode !== 'party' && (
           <div className="hostbar">
             <div className="tag">⚙ Anfitrión</div>
             <div className="row">
@@ -129,7 +132,7 @@ export default function Trivia({ game, players, board, myId, isHost, actions }) 
     <div style={{ paddingTop: 18 }}>
       <div className="chips">
         <span className="chip" style={{ cursor: 'default' }}>
-          Resultados · {game.round + 1}/{game.rounds}
+          {game.mode === 'party' ? `Juego ${game.step + 1}/${game.playlistLen}` : `Resultados · ${game.round + 1}/${game.rounds}`}
         </span>
         <span className="chip" style={{ cursor: 'default' }}>
           🗳️ {total} {total === 1 ? 'voto' : 'votos'}
@@ -152,7 +155,7 @@ export default function Trivia({ game, players, board, myId, isHost, actions }) 
         })}
       </div>
       <Leaderboard board={board} myId={myId} mode="mini" title="🏆 Ranking de la fiesta" />
-      {isHost && (
+      {isHost && game.mode !== 'party' && (
         <div className="hostbar">
           <div className="tag">⚙ Anfitrión</div>
           <div className="row">

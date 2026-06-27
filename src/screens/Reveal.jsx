@@ -81,6 +81,11 @@ export default function Reveal({ game, players, board, myId, isHost, actions }) 
         <div className="display" style={{ fontWeight: 700, fontSize: 46, lineHeight: 1, textShadow: '0 3px 14px rgba(0,0,0,.25)' }}>
           ¡Es {lab}!
         </div>
+        {(game.dad || game.mom) && (
+          <div style={{ marginTop: 8, fontWeight: 800, fontSize: 15, opacity: 0.95 }}>
+            👶 {game.dad || 'Papá'} &amp; {game.mom || 'Mamá'}
+          </div>
+        )}
         <button
           className="btn"
           style={{ marginTop: 16, background: 'rgba(255,255,255,.22)', color: '#fff', border: '2px solid rgba(255,255,255,.5)' }}

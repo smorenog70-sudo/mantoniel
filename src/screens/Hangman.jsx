@@ -20,7 +20,7 @@ export default function Hangman({ game, board, myId, isHost, actions }) {
     <div style={{ paddingTop: 22 }}>
       <div className="chips">
         <span className="chip" style={{ cursor: 'default' }}>
-          🔤 Ahorcado en equipo
+          🔤 {game.mode === 'party' ? `Juego ${game.step + 1}/${game.playlistLen}` : 'Ahorcado en equipo'}
         </span>
         <span className="chip" style={{ cursor: 'default' }}>
           {'❤️'.repeat(Math.max(0, lives))}
@@ -76,7 +76,7 @@ export default function Hangman({ game, board, myId, isHost, actions }) {
 
       {over && <Leaderboard board={board} myId={myId} mode="mini" title="🏆 Ranking de la fiesta" />}
 
-      {isHost && (
+      {isHost && game.mode !== 'party' && (
         <div className="hostbar">
           <div className="tag">⚙ Anfitrión</div>
           <div className="row">

@@ -99,7 +99,7 @@ export default function Draw({ game, players, myId, isHost, actions }) {
       <div className="topbar">
         <div className="chips">
           <span className="chip" style={{ cursor: 'default' }}>
-            🎨 {game.round + 1}/{game.rounds}
+            🎨 {game.mode === 'party' ? `Juego ${game.step + 1}/${game.playlistLen}` : `${game.round + 1}/${game.rounds}`}
           </span>
           <span className="chip" style={{ cursor: 'default' }}>
             ✏️ {amDrawer ? 'Dibujas tú' : drawerName}
@@ -109,11 +109,27 @@ export default function Draw({ game, players, myId, isHost, actions }) {
           endsAt={game.timerEnd}
           total={DRAW_SECONDS}
           runKey={game.instance + ':' + game.round}
-          onEnd={isHost ? (isLast ? actions.finishGame : actions.drawNext) : undefined}
+          onEnd={isHost && game.mode !== 'party' ? (isLast ? actions.finishGame : actions.drawNext) : undefined}
         />
       </div>
 
-      {amDrawer ? (
+      {game.phase === 'result' ? (
+        <div className="card" style={{ marginTop: 12, textAlign: 'center', padding: 14, background: '#fff6e0' }}>
+          <span className="lbl" style={{ display: 'inline' }}>La palabra era: </span>
+          <span className="display" style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)' }}>
+            {word.toUpperCase()}
+          </span>
+          <div style={{ marginTop: 6, fontWeight: 700, color: '#1f8a5b', fontSize: 14 }}>
+            {(() => {
+              const got = myGuesses
+                .filter((g) => g.correct)
+                .map((g) => (players.find((p) => p.id === g.by) || {}).name)
+                .filter(Boolean);
+              return got.length ? `Adivinaron: ${got.join(', ')} 🎉` : 'Nadie adivinó esta vez 😅';
+            })()}
+          </div>
+        </div>
+      ) : amDrawer ? (
         <div className="card" style={{ marginTop: 12, textAlign: 'center', padding: 12 }}>
           <span className="lbl" style={{ display: 'inline' }}>Dibuja: </span>
           <span className="display" style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)' }}>
@@ -164,7 +180,7 @@ export default function Draw({ game, players, myId, isHost, actions }) {
         </div>
       )}
 
-      {!amDrawer && !iGotIt && (
+      {!amDrawer && !iGotIt && game.phase !== 'result' && (
         <div className="guessbar">
           <input
             className="txt"
@@ -197,7 +213,7 @@ export default function Draw({ game, players, myId, isHost, actions }) {
         </div>
       </div>
 
-      {isHost && (
+      {isHost && game.mode !== 'party' && (
         <div className="hostbar">
           <div className="tag">⚙ Anfitrión</div>
           <div className="row">

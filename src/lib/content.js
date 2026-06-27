@@ -16,22 +16,23 @@ function buildQ(row) {
 export const GENDER = buildQ(['¿Qué crees que será?', 'Hombre', 'Mujer', 'Therian', 'Comunista']);
 
 // ---- TRIVIA DE APUESTAS (opiniones; gana quien piensa como la mayoría) ----
+// Usa {dad}/{mom} para los nombres (se rellenan con lo que ponga el anfitrión).
 export const TRIVIA = [
-  ['¿A quién se va a parecer?', 'A la mamá', 'Al papá', 'A la abuela', 'Al vecino 👀'],
-  ['¿Cuál será su primera palabra?', '"Mamá"', '"Papá"', '"No"', '"Wifi"'],
-  ['¿Quién va a cambiar más pañales?', 'La mamá', 'El papá', 'Los abuelos', 'Nadie, niñera'],
-  ['¿Qué carácter va a heredar?', 'La calma de mamá', 'El relajo de papá', 'Lo terco de los dos', 'Algo nuevo y peligroso'],
-  ['¿Nacerá antes o después de la fecha?', 'Antes', 'El día exacto', 'Después', 'Cuando se le antoje'],
-  ['¿Cuál será su talento de grande?', 'Deportista', 'Artista', 'Científico', 'Influencer sin oficio'],
-  ['¿Quién lo va a malcriar más?', 'La mamá', 'El papá', 'Los abuelos', 'Los tíos'],
-  ['¿Qué va a estudiar?', 'Medicina', 'Ingeniería', 'Arte', 'La revolución ☭'],
-  ['¿Cuánto va a pesar al nacer?', 'Menos de 3 kg', '3 a 3.5 kg', '3.5 a 4 kg', 'Campeón de +4 kg'],
-  ['¿Será el consentido o el rebelde?', 'El consentido', 'El rebelde', 'Las dos cosas', 'El que une a la familia'],
-  ['¿Este bebé los une o los quiebra?', 'Los une para siempre', 'Aguantan "por el niño"', 'Divorcio en 5 años', 'Pelean por la custodia 👀'],
-  ['¿Por qué irá a terapia de grande?', 'Por los papás', 'Por los abuelos', 'Por toda la familia', 'Por este gender reveal'],
-  ['¿Quién le enseñará la primera grosería?', 'Un tío', 'El papá distraído', 'La abuela "sin querer"', 'El internet'],
-  ['¿A qué hora despertará a todos?', '5 a.m. en punto', 'A media noche', 'Nunca duerme', 'Cuando te dormiste'],
-  ['¿Cuál será su superpoder de bebé?', 'Llorar con eco', 'Sonrisa que desarma', 'Dormir donde sea', 'Vomitar con puntería'],
+  ['¿A quién se va a parecer el bebé?', 'A {mom}', 'A {dad}', 'A la abuela', 'Al vecino 👀'],
+  ['¿Quién va a malcriar más al bebé?', '{mom}', '{dad}', 'Los abuelos', 'Los tíos'],
+  ['¿Quién va a ser el más estricto criando?', '{mom}', '{dad}', 'Los dos', 'Nadie se atreve'],
+  ['¿Quién va a llevar al bebé al gym desde chiquito?', '{dad}', '{mom}', 'Nadie', 'Hasta los 18'],
+  ['¿Quién va a poner Betty la Fea de fondo en la casa?', '{mom}', '{dad}', 'La abuela', 'Nadie, por piedad'],
+  ['¿Quién va a salir más tacaño con los juguetes?', '{dad}', '{mom}', 'Igualito los dos', 'Los abuelos compran todo'],
+  ['El bebé va a salir bien fiestero… ¿a quién?', '{dad}', '{mom}', 'A los tíos', 'A los abuelos'],
+  ['¿De quién hereda el bebé la flojera para el ejercicio?', '{mom}', '{dad}', 'De nadie, será atleta', 'Pura flojera'],
+  ['¿Quién va a armar el primer cumple estilo Halloween?', '{mom}', '{dad}', 'Los abuelos', 'Nadie, será en verano'],
+  ['¿Quién va a enseñarle al bebé a jugar volleyball?', '{dad}', '{mom}', 'El tío', 'Nadie'],
+  ['¿Quién va a llorar más en el parto?', '{dad}', '{mom}', 'Los dos', 'El doctor'],
+  ['¿Quién se va a despertar a media noche por el bebé?', '{mom}', '{dad}', 'Los dos', 'La abuela'],
+  ['¿Cuál será la primera palabra del bebé?', '"Mamá"', '"Papá"', '"No"', '"Wifi"'],
+  ['¿Quién va a consentir de más al bebé?', '{dad}', '{mom}', 'Los abuelos', 'Los tíos'],
+  ['¿Por qué irá a terapia el bebé de grande?', 'Por {mom}', 'Por {dad}', 'Por la familia', 'Por este gender reveal'],
 ].map(buildQ);
 
 // ---- DIBUJO (Pictionary): palabras para dibujar (temática bebé) ----
