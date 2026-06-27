@@ -802,3 +802,18 @@ input.txt {
 .wrap { padding-bottom: 96px; }
 .partybar { bottom: 72px; }
 .hostbar { bottom: 64px; }
+
+/* arreglo de contraste: chips/textos dentro de tarjetas claras deben ir oscuros */
+.card .pchip {
+  color: var(--ink);
+  background: #efeae0;
+  border-color: #e0d9cd;
+}
+.card .pchip.on {
+  background: #fff6e0;
+  border-color: var(--gold);
+  color: var(--ink);
+}
+.card .faint {
+  color: #9a93a6;
+}

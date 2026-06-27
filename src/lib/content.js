@@ -35,17 +35,17 @@ export const TRIVIA = [
   ['¿Por qué irá a terapia el bebé de grande?', 'Por {mom}', 'Por {dad}', 'Por la familia', 'Por este gender reveal'],
 ].map(buildQ);
 
-// ---- DIBUJO (Pictionary): palabras para dibujar (temática bebé) ----
+// ---- DIBUJO (Pictionary): palabras para dibujar (temática bebé, colombiano) ----
 export const DRAW_WORDS = [
-  'biberón', 'pañal', 'cuna', 'sonajero', 'cigüeña', 'chupón', 'carriola', 'peluche',
-  'ecografía', 'mordedera', 'bañera', 'gateo', 'baberito', 'cangurera',
+  'tetero', 'pañal', 'cuna', 'sonajero', 'cigüeña', 'chupo', 'coche', 'peluche',
+  'ecografía', 'mordedor', 'tina', 'gateo', 'babero', 'pañalera',
 ];
 
-// ---- AHORCADO (en equipo): palabras sin acentos para teclado simple ----
-// (Incluye Ñ; el teclado del juego la trae.)
+// ---- AHORCADO (en equipo): palabras sin acentos, colombiano (la Ñ sí se vale) ----
 export const HANGMAN_WORDS = [
-  'BIBERON', 'PAÑAL', 'CUNA', 'DESVELO', 'ANTOJO', 'SONAJERO', 'CARRIOLA',
-  'PELUCHE', 'ABUELA', 'FAMILIA', 'PARTO', 'CIGUENA', 'GATEO', 'LACTANCIA',
+  'TETERO', 'CHUPO', 'PAÑAL', 'PAÑALERA', 'CUNA', 'COCHE', 'TRASNOCHO', 'ANTOJO',
+  'MORDEDOR', 'SONAJERO', 'ABUELA', 'FAMILIA', 'PARTO', 'CIGUENA', 'GATEO',
+  'LACTANCIA', 'CONSENTIDO', 'CHINO',
 ];
 
 // ---- ¿QUIÉN ES MÁS PROBABLE? (votas por una persona de la sala) ----
