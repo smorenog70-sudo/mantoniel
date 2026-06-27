@@ -1,16 +1,27 @@
 import { useStorage } from '@liveblocks/react';
 import Leaderboard from '../components/Leaderboard';
-import { GENDER } from '../lib/content';
-import { colorOf, labelOf, revealEmoji, shade } from '../lib/game';
+import { GENDER, PREDICT } from '../lib/content';
+import { colorOf, labelOf, revealEmoji, shade, fill, maxKey, tally } from '../lib/game';
 import { Sound } from '../lib/sound';
 import { fireConfetti } from '../lib/confetti';
 
-export default function Reveal({ game, players, board, myId, isHost, actions }) {
+export default function Reveal({ game, players, board, myId, isHost, actions, predictions }) {
   const bets = useStorage((root) => root.bets) || new Map();
   const pmap = {};
   players.forEach((p) => (pmap[p.id] = p));
   const betEntries = [];
   for (const [pid, opt] of bets) betEntries.push({ pid, opt });
+
+  // resumen de predicciones de la banda (opción más elegida por pregunta)
+  const recap = PREDICT.map((q0, qi) => {
+    const vals = {};
+    players.forEach((p) => {
+      const v = predictions && predictions[p.id + ':' + qi];
+      if (v) vals[p.id] = v;
+    });
+    const top = maxKey(tally(vals));
+    return { text: fill(q0.text, game.dad, game.mom), top: top ? fill(labelOf(q0.options, top), game.dad, game.mom) : null, n: Object.keys(vals).length };
+  }).filter((r) => r.top);
 
   // antes de revelar
   if (!game.revealed) {
@@ -26,6 +37,20 @@ export default function Reveal({ game, players, board, myId, isHost, actions }) 
         </div>
 
         <Leaderboard board={board} myId={myId} mode="full" title="🏆 Así van antes del bono" />
+
+        {recap.length > 0 && (
+          <div className="card mt">
+            <label className="lbl">📋 Lo que predijo la banda</label>
+            <div className="lb">
+              {recap.map((r, i) => (
+                <div key={i} className="lbrow" style={{ alignItems: 'flex-start' }}>
+                  <span className="nm" style={{ flex: 1 }}>{r.text}</span>
+                  <span className="pts" style={{ color: '#1f8a5b', fontSize: 14 }}>{r.top}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {isHost ? (
           <div className="card mt">

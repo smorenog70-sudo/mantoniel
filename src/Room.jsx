@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { useStorage, useMutation } from '@liveblocks/react';
+import { useEffect, useRef, useState } from 'react';
+import { useStorage, useMutation, useBroadcastEvent, useEventListener } from '@liveblocks/react';
 import {
   computeDeltas,
   computeStepDeltas,
@@ -12,6 +12,10 @@ import {
   TRIVIA_SECONDS,
   DRAW_SECONDS,
   MOSTLIKELY_SECONDS,
+  COUPLE_SECONDS,
+  QUIP_WRITE_SECONDS,
+  QUIP_VOTE_SECONDS,
+  PREDICT_SECONDS,
   BET_SECONDS,
   INTRO_SECONDS,
   RESULT_SECONDS,
@@ -27,11 +31,15 @@ import Join from './screens/Join';
 import Hub from './screens/Hub';
 import Intro from './screens/Intro';
 import Bet from './screens/Bet';
+import Predict from './screens/Predict';
 import Trivia from './screens/Trivia';
+import Couple from './screens/Couple';
+import Quip from './screens/Quip';
 import MostLikely from './screens/MostLikely';
 import Hangman from './screens/Hangman';
 import Draw from './screens/Draw';
 import Reveal from './screens/Reveal';
+import { ReactionBar, ReactionsLayer } from './components/Reactions';
 
 // ---- Helpers sobre estructuras Live (se usan dentro de mutaciones) ----
 function snapMap(m) {
@@ -54,6 +62,7 @@ function clearTransient(storage) {
   clearList(storage.get('guesses'));
   clearList(storage.get('letters'));
   clearMap(storage.get('answers'));
+  clearMap(storage.get('texts'));
 }
 
 // Arranca un mini-juego del playlist (modo fiesta). idx fuera de rango => revelación.
@@ -92,7 +101,9 @@ function startSegment(g, storage, idx) {
 function beginPlay(g) {
   const screen = g.get('screen');
   if (screen === 'trivia') g.update({ phase: 'q', timerEnd: Date.now() + TRIVIA_SECONDS * 1000 });
+  else if (screen === 'couple') g.update({ phase: 'q', timerEnd: Date.now() + COUPLE_SECONDS * 1000 });
   else if (screen === 'mostlikely') g.update({ phase: 'vote', timerEnd: Date.now() + MOSTLIKELY_SECONDS * 1000 });
+  else if (screen === 'quip') g.update({ phase: 'write', timerEnd: Date.now() + QUIP_WRITE_SECONDS * 1000 });
   else if (screen === 'hangman') g.update({ phase: 'play', timerEnd: Date.now() + 60 * 1000 });
   else if (screen === 'draw') g.update({ phase: 'draw', timerEnd: Date.now() + DRAW_SECONDS * 1000 });
 }
@@ -106,6 +117,7 @@ function commitStep(g, storage) {
     instance: g.get('instance'),
     contentIndex: g.get('contentIndex'),
     drawerId: g.get('drawerId'),
+    coupleCorrect: storage.get('coupleAnswers').get(String(g.get('contentIndex'))),
     players: snapMap(storage.get('players')),
     answers: snapMap(storage.get('answers')),
     guesses: storage.get('guesses').toArray(),
@@ -163,6 +175,8 @@ export default function Room({ myId, wantHost, saved, onLeave }) {
   const playersMap = useStorage((root) => root.players);
   const pointsMap = useStorage((root) => root.points);
   const betsMap = useStorage((root) => root.bets);
+  const coupleAnswersMap = useStorage((root) => root.coupleAnswers);
+  const predictionsMap = useStorage((root) => root.predictions);
   const lettersForEngine = useStorage((root) => root.letters);
 
   // ---------- mutaciones (modo manual) ----------
@@ -209,6 +223,15 @@ export default function Room({ myId, wantHost, saved, onLeave }) {
     [myId]
   );
   const placeBet = useMutation(({ storage }, opt) => storage.get('bets').set(myId, opt), [myId]);
+  const setPrediction = useMutation(({ storage }, qIdx, opt) => storage.get('predictions').set(myId + ':' + qIdx, opt), [myId]);
+  const submitText = useMutation(
+    ({ storage }, text) => {
+      const g = storage.get('game');
+      storage.get('texts').set(g.get('instance') + ':' + myId, String(text || '').slice(0, 120));
+    },
+    [myId]
+  );
+  const setCoupleAnswer = useMutation(({ storage }, qIdx, opt) => storage.get('coupleAnswers').set(String(qIdx), opt), []);
 
   const triviaShowResult = useMutation(({ storage }) => {
     const g = storage.get('game');
@@ -316,8 +339,10 @@ export default function Room({ myId, wantHost, saved, onLeave }) {
 
   const startParty = useMutation(({ storage }, dad, mom) => {
     const g = storage.get('game');
-    const playlist = buildPlaylist(PARTY_GAMES);
+    const coupleIdx = Array.from(storage.get('coupleAnswers').keys()).map((k) => Number(k));
+    const playlist = buildPlaylist(PARTY_GAMES, { coupleIdx });
     clearTransient(storage);
+    clearMap(storage.get('predictions'));
     const pts = storage.get('points');
     const ks = [];
     pts.forEach((_, k) => ks.push(k));
@@ -334,9 +359,9 @@ export default function Room({ myId, wantHost, saved, onLeave }) {
       lastScored: -1,
       revealed: null,
       awarded: true,
-      screen: 'bet',
+      screen: 'predict',
       phase: 'open',
-      timerEnd: Date.now() + BET_SECONDS * 1000,
+      timerEnd: Date.now() + PREDICT_SECONDS * 1000,
       resultEnd: null,
       instance: (g.get('instance') || 0) + 1,
     });
@@ -348,7 +373,7 @@ export default function Room({ myId, wantHost, saved, onLeave }) {
     if (g.get('mode') !== 'party') return;
     const screen = g.get('screen');
     const phase = g.get('phase');
-    if (screen === 'bet') {
+    if (screen === 'bet' || screen === 'predict') {
       startSegment(g, storage, 0);
       return;
     }
@@ -360,11 +385,22 @@ export default function Room({ myId, wantHost, saved, onLeave }) {
       startSegment(g, storage, g.get('step') + 1);
       return;
     }
+    // Quiplash: de escribir a votar (sin puntos todavía).
+    if (screen === 'quip' && phase === 'write') {
+      g.update({ phase: 'vote', timerEnd: Date.now() + QUIP_VOTE_SECONDS * 1000 });
+      return;
+    }
     // fin de la fase de juego -> acreditar puntos y mostrar resultados
     if (screen === 'trivia' && phase === 'q') {
       commitStep(g, storage);
       g.update({ phase: 'result', resultEnd: Date.now() + RESULT_SECONDS * 1000 });
+    } else if (screen === 'couple' && phase === 'q') {
+      commitStep(g, storage);
+      g.update({ phase: 'result', resultEnd: Date.now() + RESULT_SECONDS * 1000 });
     } else if (screen === 'mostlikely' && phase === 'vote') {
+      commitStep(g, storage);
+      g.update({ phase: 'result', resultEnd: Date.now() + RESULT_SECONDS * 1000 });
+    } else if (screen === 'quip' && phase === 'vote') {
       commitStep(g, storage);
       g.update({ phase: 'result', resultEnd: Date.now() + RESULT_SECONDS * 1000 });
     } else if (screen === 'draw' && phase === 'draw') {
@@ -379,7 +415,7 @@ export default function Room({ myId, wantHost, saved, onLeave }) {
   const partySkip = useMutation(({ storage }) => {
     const g = storage.get('game');
     if (g.get('mode') !== 'party') return;
-    if (g.get('screen') === 'bet') startSegment(g, storage, 0);
+    if (g.get('screen') === 'bet' || g.get('screen') === 'predict') startSegment(g, storage, 0);
     else startSegment(g, storage, g.get('step') + 1);
   }, []);
   const partyToReveal = useMutation(({ storage }) => {
@@ -398,10 +434,27 @@ export default function Room({ myId, wantHost, saved, onLeave }) {
     return () => window.removeEventListener('pointerdown', h);
   }, []);
 
+  // Reacciones efímeras (emojis flotantes) vía broadcast.
+  const broadcast = useBroadcastEvent();
+  const [reactions, setReactions] = useState([]);
+  const spawnReaction = (emoji) => {
+    const id = Math.random().toString(36).slice(2);
+    const x = 8 + Math.random() * 80;
+    setReactions((r) => [...r.slice(-24), { id, emoji, x }]);
+    setTimeout(() => setReactions((r) => r.filter((z) => z.id !== id)), 2600);
+  };
+  useEventListener(({ event }) => {
+    if (event && event.type === 'reaction') spawnReaction(event.emoji);
+  });
+  const react = (emoji) => {
+    spawnReaction(emoji);
+    broadcast({ type: 'reaction', emoji });
+  };
+
   const fxKey = useRef('');
   useEffect(() => {
     if (!game) return;
-    if ((game.screen === 'trivia' || game.screen === 'mostlikely') && game.phase === 'result') {
+    if ((game.screen === 'trivia' || game.screen === 'mostlikely' || game.screen === 'couple' || game.screen === 'quip') && game.phase === 'result') {
       const k = 'res:' + game.screen + ':' + game.instance + ':' + game.round;
       if (fxKey.current !== k) {
         fxKey.current = k;
@@ -446,6 +499,8 @@ export default function Room({ myId, wantHost, saved, onLeave }) {
   const points = pointsMap ? Object.fromEntries(pointsMap) : {};
   const board = leaderboard(playersObj, points);
   const betsObj = Object.fromEntries(betsMap || []);
+  const coupleAnswersObj = Object.fromEntries(coupleAnswersMap || []);
+  const predictionsObj = Object.fromEntries(predictionsMap || []);
   const betsCount = betsMap ? betsMap.size : 0;
   const me = playersMap.get(myId);
 
@@ -463,7 +518,7 @@ export default function Room({ myId, wantHost, saved, onLeave }) {
   }
 
   const actions = {
-    startGame, startParty, setParents, finishGame, submitAnswer, placeBet,
+    startGame, startParty, setParents, setCoupleAnswer, setPrediction, submitText, finishGame, submitAnswer, placeBet,
     triviaShowResult, triviaBack, triviaNext,
     mlShowResult, mlBack, mlNext,
     guessLetter, pushSegment, clearCanvas, guessDraw, drawNext,
@@ -479,8 +534,17 @@ export default function Room({ myId, wantHost, saved, onLeave }) {
     case 'bet':
       el = <Bet {...common} bets={betsObj} />;
       break;
+    case 'predict':
+      el = <Predict {...common} bets={betsObj} predictions={predictionsObj} />;
+      break;
     case 'trivia':
       el = <Trivia {...common} />;
+      break;
+    case 'couple':
+      el = <Couple {...common} coupleAnswers={coupleAnswersObj} />;
+      break;
+    case 'quip':
+      el = <Quip {...common} />;
       break;
     case 'mostlikely':
       el = <MostLikely {...common} />;
@@ -492,17 +556,19 @@ export default function Room({ myId, wantHost, saved, onLeave }) {
       el = <Draw {...common} />;
       break;
     case 'reveal':
-      el = <Reveal {...common} />;
+      el = <Reveal {...common} predictions={predictionsObj} />;
       break;
     case 'hub':
     default:
-      el = <Hub {...common} roomCode={roomCodeFromUrl()} betsCount={betsCount} />;
+      el = <Hub {...common} roomCode={roomCodeFromUrl()} betsCount={betsCount} coupleAnswers={coupleAnswersObj} />;
   }
 
   const showPartyBar = isHost && game.mode === 'party' && game.screen !== 'reveal';
   return (
     <>
       {el}
+      <ReactionsLayer items={reactions} />
+      <ReactionBar onReact={react} />
       {showPartyBar && <PartyBar step={game.step} len={game.playlistLen} onSkip={partySkip} onReveal={partyToReveal} />}
     </>
   );

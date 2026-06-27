@@ -61,3 +61,43 @@ export const MOSTLIKELY = [
   '¿Quién va a dar el peor consejo de crianza?',
   '¿Quién se va a poner a llorar viendo la ecografía?',
 ];
+
+// ---- TRIVIA DE LA PAREJA (respuestas reales; el anfitrión las configura) ----
+// El "correcto" no está aquí: lo marca el anfitrión en el hub (game/coupleAnswers).
+export const COUPLE = [
+  ['¿Quién dijo "te amo" primero?', '{dad}', '{mom}', 'Los dos igual'],
+  ['¿Cuántos años llevan juntos?', 'Menos de 2', '2 a 3', '4 a 5', '6 o más'],
+  ['¿Cómo se conocieron?', 'En el trabajo', 'Por amigos', 'En una app', 'En una fiesta'],
+  ['¿Quién es más celoso/a?', '{dad}', '{mom}', 'Ninguno'],
+  ['¿Quién cocina mejor?', '{dad}', '{mom}', 'Piden domicilio'],
+  ['¿Quién es más ordenado/a?', '{dad}', '{mom}'],
+  ['¿Quién llega tarde siempre?', '{dad}', '{mom}'],
+  ['¿Quién gana las discusiones?', '{dad}', '{mom}', 'Nadie cede'],
+  ['¿De quién fue la idea del bebé?', '{dad}', '{mom}', 'De los dos'],
+  ['¿Quién es más fiestero/a?', '{dad}', '{mom}'],
+].map(buildQ);
+
+// ---- ESCRIBE Y VOTA (prompts abiertos estilo Quiplash) ----
+export const QUIP = [
+  'El peor consejo para los nuevos papás es…',
+  'Si es niño, de cariño le van a decir…',
+  'Lo primero que va a hacer {mom} cuando nazca el bebé es…',
+  'La regla más estricta que va a poner {mom} es…',
+  '{dad} va a malcriar al bebé comprándole…',
+  'El bebé va a heredar de {dad} la obsesión por…',
+  'Son las 3am y el bebé llora porque…',
+  'El primer berrinche épico del bebé va a ser por…',
+  'El talento secreto de este bebé va a ser…',
+  'Lo que jamás le vamos a contar al bebé de la fiesta de hoy es…',
+  'El bebé va a salir experto en…',
+  'La excusa de {dad} para no cambiar el pañal va a ser…',
+];
+
+// ---- BOLETA DE PREDICCIONES (extras; el género va aparte en GENDER) ----
+export const PREDICT = [
+  ['¿A quién se va a parecer?', 'A {dad}', 'A {mom}', 'A la abuela', 'Al vecino 👀'],
+  ['¿Cuánto va a pesar al nacer?', 'Menos de 3 kg', '3 a 3.5 kg', '3.5 a 4 kg', 'Campeón +4 kg'],
+  ['¿Cuándo va a nacer?', 'Antes de la fecha', 'El día exacto', 'Después de la fecha'],
+  ['¿Qué va a ser de grande?', 'Deportista', 'Artista', 'Científico', 'Influencer'],
+  ['¿Cuál será su primera palabra?', '"Mamá"', '"Papá"', '"No"', '"Wifi"'],
+].map(buildQ);

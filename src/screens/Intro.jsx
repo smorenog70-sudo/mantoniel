@@ -22,6 +22,16 @@ const INFO = {
     name: '¿Quién es más probable?',
     how: 'Vota por la persona de la sala que mejor le quede a la frase. Ganas si votas como la mayoría.',
   },
+  couple: {
+    e: '💍',
+    name: '¿Conoces a la pareja?',
+    how: 'Pregunta real sobre los papás. Gana quien le atine a la respuesta verdadera que ellos dejaron.',
+  },
+  quip: {
+    e: '😂',
+    name: 'Escribe y vota',
+    how: 'Escribe la respuesta más chistosa al prompt; luego todos votan la mejor (anónimo). Te dan puntos por cada voto que recibas.',
+  },
 };
 
 export default function Intro({ game, players, myId, isHost, onBegin }) {

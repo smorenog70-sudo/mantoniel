@@ -114,6 +114,20 @@ export default function MostLikely({ game, players, board, myId, isHost, actions
             ))}
         </div>
       </div>
+      {(() => {
+        const scorers = winId ? Object.keys(ans).filter((pid) => ans[pid] === winId).map((pid) => pmap[pid]).filter(Boolean) : [];
+        return (
+          <div className="card" style={{ marginTop: 8, padding: '11px 14px', textAlign: 'center' }}>
+            {scorers.length ? (
+              <span style={{ fontWeight: 800, color: 'var(--ink)' }}>
+                🏅 <span style={{ color: '#1f8a5b' }}>+1 punto</span> para {scorers.map((s) => s.name).join(', ')}
+              </span>
+            ) : (
+              <span style={{ fontWeight: 800, color: '#9a93a6' }}>Nadie votó por la mayoría 😅</span>
+            )}
+          </div>
+        );
+      })()}
       <Leaderboard board={board} myId={myId} mode="mini" title="🏆 Ranking de la fiesta" />
       {isHost && game.mode !== 'party' && (
         <div className="hostbar">

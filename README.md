@@ -8,12 +8,15 @@ Hecho con **React + Vite + Liveblocks**. Sin servidor propio, sin base de datos 
 
 ## 🎮 Qué incluye
 
-- 🎲 **La apuesta del bebé** — cada quien apuesta el género (Hombre / Mujer / Therian / Comunista). Queda guardada hasta el final.
-- 🎯 **Trivia de apuestas** — preguntas de opinión; gana quien piensa como la mayoría. Con cronómetro.
+- 📋 **Boleta de predicciones** — al inicio cada quien predice cómo será el bebé (a quién se parece, peso, profesión…) e incluye la apuesta del género (Hombre / Mujer / Therian / Comunista), que da +3.
+- 🎯 **Trivia de apuestas** — preguntas de opinión sobre el bebé; gana quien piensa como la mayoría. Con cronómetro.
+- 💍 **¿Conoces a la pareja?** — preguntas reales sobre los papás (el anfitrión o la pareja marcan las respuestas antes); gana quien le atine.
+- 😂 **Escribe y vota** — todos escriben la respuesta más chistosa a un prompt y luego votan la mejor (anónimo). Puntos por cada voto recibido.
 - 🎨 **Dibujo (Pictionary)** — alguien dibuja en un lienzo compartido en vivo y los demás adivinan escribiendo.
 - 🔤 **Ahorcado en equipo** — todos comparten un teclado para adivinar la palabra antes de quedarse sin vidas.
 - 🤔 **¿Quién es más probable?** — votas por una persona de la sala; se corona al más votado.
 - 🎊 **Gran Revelación** — el anfitrión revela la verdad, explota el confetti y se reparten +3 a quienes le atinaron.
+- 😍 **Reacciones en vivo** — todos pueden lanzar emojis que flotan en la pantalla de todos, en cualquier momento.
 
 Cada juego es corto y con dinámica distinta para que no se haga monótono. El ranking de la fiesta es uno solo y se acumula a lo largo de todos los juegos.
 

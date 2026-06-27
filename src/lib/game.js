@@ -1,17 +1,21 @@
-import { GENDER, TRIVIA, MOSTLIKELY, HANGMAN_WORDS, DRAW_WORDS } from './content';
+import { GENDER, TRIVIA, MOSTLIKELY, HANGMAN_WORDS, DRAW_WORDS, COUPLE, QUIP } from './content';
 
 export const GENDER_BONUS = 3;
 export const TRIVIA_SECONDS = 20;
 export const DRAW_SECONDS = 75;
 export const MOSTLIKELY_SECONDS = 22;
+export const COUPLE_SECONDS = 18;
+export const QUIP_WRITE_SECONDS = 40;
+export const QUIP_VOTE_SECONDS = 25;
+export const PREDICT_SECONDS = 45;
 
 // Modo fiesta: cantidad de mini-juegos al azar y pausas para ver resultados.
 export const PARTY_GAMES = 15;
 export const BET_SECONDS = 30;
-export const INTRO_SECONDS = 5;
-export const RESULT_SECONDS = 6;
-export const DRAW_RESULT_SECONDS = 6;
-export const HANG_RESULT_SECONDS = 5;
+export const INTRO_SECONDS = 10;
+export const RESULT_SECONDS = 8;
+export const DRAW_RESULT_SECONDS = 7;
+export const HANG_RESULT_SECONDS = 6;
 
 // Reemplaza {dad}/{mom} (y {papá}/{mamá}) por los nombres de los papás.
 // Si no hay nombre, usa "Papá"/"Mamá" para que el texto siga teniendo sentido.
@@ -205,17 +209,25 @@ function range(n) {
 
 // Arma la lista de la fiesta: n mini-juegos mezclados, sin repetir contenido
 // dentro de cada tipo y evitando el mismo tipo dos veces seguidas.
+// opts.coupleIdx = índices de preguntas de "trivia de la pareja" ya configuradas.
 // Devuelve [{ t: tipo, ci: índice de contenido }]
-export function buildPlaylist(n) {
-  const want = { trivia: 5, mostlikely: 4, hangman: 3, draw: 3 };
+export function buildPlaylist(n, opts) {
+  opts = opts || {};
+  const coupleIdx = (opts.coupleIdx || []).filter((x) => x != null);
+  const coupleN = Math.min(2, coupleIdx.length);
+  const want = coupleN
+    ? { trivia: 3, mostlikely: 3, quip: 3, hangman: 2, draw: 2, couple: coupleN }
+    : { trivia: 4, mostlikely: 3, quip: 3, hangman: 2, draw: 2 };
+
   let types = [];
   Object.keys(want).forEach((t) => {
     for (let i = 0; i < want[t]; i++) types.push(t);
   });
   types = shuffle(types);
-  // Si piden más de los disponibles, rellena repitiendo tipos.
-  while (types.length < n) types.push(['trivia', 'mostlikely', 'hangman', 'draw'][types.length % 4]);
+  const fillTypes = ['trivia', 'mostlikely', 'quip', 'hangman', 'draw'];
+  while (types.length < n) types.push(fillTypes[types.length % fillTypes.length]);
   types = types.slice(0, n);
+
   // Evita el mismo tipo adyacente (pasada ligera).
   for (let i = 1; i < types.length; i++) {
     if (types[i] === types[i - 1]) {
@@ -229,16 +241,19 @@ export function buildPlaylist(n) {
       }
     }
   }
+
   const pools = {
     trivia: shuffle(range(TRIVIA.length)),
     mostlikely: shuffle(range(MOSTLIKELY.length)),
     hangman: shuffle(range(HANGMAN_WORDS.length)),
     draw: shuffle(range(DRAW_WORDS.length)),
+    quip: shuffle(range(QUIP.length)),
+    couple: shuffle(coupleIdx.slice()),
   };
-  const ctr = { trivia: 0, mostlikely: 0, hangman: 0, draw: 0 };
+  const ctr = { trivia: 0, mostlikely: 0, hangman: 0, draw: 0, quip: 0, couple: 0 };
   return types.map((t) => {
     const pool = pools[t];
-    const ci = pool[ctr[t] % pool.length];
+    const ci = pool.length ? pool[ctr[t] % pool.length] : 0;
     ctr[t]++;
     return { t, ci };
   });
@@ -266,6 +281,25 @@ export function computeStepDeltas(plain) {
     const correct = (plain.guesses || []).filter((g) => g.round === 0 && g.correct).sort((a, b) => a.at - b.at);
     correct.forEach((g, i) => add(g.by, i === 0 ? 3 : i === 1 ? 2 : 1));
     if (correct.length > 0) add(plain.drawerId, 2);
+  } else if (type === 'couple') {
+    // +1 a quien le atinó a la respuesta marcada por el anfitrión.
+    const vals = answersForRound(plain.answers, plain.instance, 0);
+    const correct = plain.coupleCorrect;
+    if (correct) for (const pid in vals) if (vals[pid] === correct) add(pid, 1);
+  } else if (type === 'quip') {
+    // votos por autor: +1 por cada voto recibido, +2 al más votado.
+    const votes = answersForRound(plain.answers, plain.instance, 0); // votante -> autor
+    const byAuthor = {};
+    for (const voter in votes) {
+      const a = votes[voter];
+      if (a && a !== voter) byAuthor[a] = (byAuthor[a] || 0) + 1;
+    }
+    let max = 0;
+    for (const a in byAuthor) if (byAuthor[a] > max) max = byAuthor[a];
+    for (const a in byAuthor) {
+      add(a, byAuthor[a]);
+      if (max > 0 && byAuthor[a] === max) add(a, 2);
+    }
   }
   return deltas;
 }

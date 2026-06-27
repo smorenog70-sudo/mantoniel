@@ -2,7 +2,8 @@ import { useState } from 'react';
 import Leaderboard from '../components/Leaderboard';
 import PlayersRow from '../components/PlayersRow';
 import { Sound } from '../lib/sound';
-import { PARTY_GAMES } from '../lib/game';
+import { PARTY_GAMES, fill } from '../lib/game';
+import { COUPLE } from '../lib/content';
 
 function shareLink(roomCode) {
   const url = `${location.origin}${location.pathname}?room=${roomCode}`;
@@ -22,13 +23,15 @@ const GAMES = [
   { key: 'mostlikely', emoji: '🤔', label: '¿Quién es más probable?' },
 ];
 
-export default function Hub({ game, roomCode, players, board, betsCount, myId, isHost, actions }) {
+export default function Hub({ game, roomCode, players, board, betsCount, myId, isHost, actions, coupleAnswers }) {
   const [showManual, setShowManual] = useState(false);
+  const [showCouple, setShowCouple] = useState(false);
   const [dad, setDad] = useState((game && game.dad) || '');
   const [mom, setMom] = useState((game && game.mom) || '');
   const hasScores = board.some((p) => p.score > 0);
   const started = hasScores || betsCount > 0;
   const namesLine = (game && (game.dad || game.mom)) ? `${game.dad || 'Papá'} & ${game.mom || 'Mamá'}` : '';
+  const coupleSet = coupleAnswers ? Object.keys(coupleAnswers).length : 0;
 
   return (
     <div style={{ paddingTop: 22 }}>
@@ -108,6 +111,46 @@ export default function Hub({ game, roomCode, players, board, betsCount, myId, i
           <p
             className="faint"
             style={{ textAlign: 'center', marginTop: 14, fontSize: 13, cursor: 'pointer', fontWeight: 700 }}
+            onClick={() => setShowCouple((v) => !v)}
+          >
+            {showCouple ? '▲ Ocultar' : '💍 Configurar "¿Conoces a la pareja?"'} {coupleSet > 0 ? `(${coupleSet} listas)` : ''}
+          </p>
+
+          {showCouple && (
+            <div className="card" style={{ marginTop: 6 }}>
+              <label className="lbl">Marca la respuesta REAL de cada una</label>
+              <p style={{ fontSize: 12, color: '#8a7d55', fontWeight: 600, margin: '0 0 10px' }}>
+                Solo las que configures aparecen en la fiesta. Idealmente las llena la pareja 😉
+              </p>
+              {COUPLE.map((q0, qi) => {
+                const text = fill(q0.text, game && game.dad, game && game.mom);
+                const current = coupleAnswers ? coupleAnswers[String(qi)] : null;
+                return (
+                  <div key={qi} style={{ marginBottom: 12 }}>
+                    <div style={{ fontWeight: 800, fontSize: 13.5, color: 'var(--ink)', marginBottom: 6 }}>{text}</div>
+                    <div className="players">
+                      {q0.options.map((o) => (
+                        <button
+                          key={o.id}
+                          className={'pchip pick' + (current === o.id ? ' on' : '')}
+                          onClick={() => {
+                            Sound.tap();
+                            actions.setCoupleAnswer(qi, o.id);
+                          }}
+                        >
+                          {fill(o.label, game && game.dad, game && game.mom)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <p
+            className="faint"
+            style={{ textAlign: 'center', marginTop: 10, fontSize: 13, cursor: 'pointer', fontWeight: 700 }}
             onClick={() => setShowManual((v) => !v)}
           >
             {showManual ? '▲ Ocultar control manual' : '▼ ¿Prefieres lanzar los juegos a mano?'}

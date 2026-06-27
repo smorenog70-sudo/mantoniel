@@ -154,6 +154,20 @@ export default function Trivia({ game, players, board, myId, isHost, actions }) 
           return <Bar key={o.id} o={o} n={t[o.id] || 0} pct={total ? Math.round((t[o.id] || 0) / total * 100) : 0} voters={voters} win={win} />;
         })}
       </div>
+      {(() => {
+        const scorers = win ? Object.keys(ans).filter((pid) => ans[pid] === win).map((pid) => pmap[pid]).filter(Boolean) : [];
+        return (
+          <div className="card" style={{ marginTop: 8, padding: '11px 14px', textAlign: 'center' }}>
+            {scorers.length ? (
+              <span style={{ fontWeight: 800, color: 'var(--ink)' }}>
+                🏅 <span style={{ color: '#1f8a5b' }}>+1 punto</span> para {scorers.map((s) => s.name).join(', ')}
+              </span>
+            ) : (
+              <span style={{ fontWeight: 800, color: '#9a93a6' }}>Nadie le atinó a la mayoría 😅</span>
+            )}
+          </div>
+        );
+      })()}
       <Leaderboard board={board} myId={myId} mode="mini" title="🏆 Ranking de la fiesta" />
       {isHost && game.mode !== 'party' && (
         <div className="hostbar">
