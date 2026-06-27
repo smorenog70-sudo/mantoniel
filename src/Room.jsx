@@ -156,15 +156,15 @@ function NotFound({ onBack }) {
     </div>
   );
 }
-function PartyBar({ step, len, onSkip, onReveal }) {
+function PartyBar({ step, len, onAdvance, onReveal }) {
   return (
     <div className="partybar">
-      <span className="pb-step">🎉 Juego {Math.min(step + 1, len)}/{len}</span>
-      <button className="pb-btn" onClick={onSkip}>
-        ⏭️ Saltar
+      <span className="pb-step">🎉 {Math.min(step + 1, len)}/{len}</span>
+      <button className="pb-btn" onClick={onAdvance}>
+        ⏩ Avanzar
       </button>
       <button className="pb-btn gold" onClick={onReveal}>
-        🎊 Revelación
+        🎊 Final
       </button>
     </div>
   );
@@ -569,7 +569,7 @@ export default function Room({ myId, wantHost, saved, onLeave }) {
       {el}
       <ReactionsLayer items={reactions} />
       <ReactionBar onReact={react} />
-      {showPartyBar && <PartyBar step={game.step} len={game.playlistLen} onSkip={partySkip} onReveal={partyToReveal} />}
+      {showPartyBar && <PartyBar step={game.step} len={game.playlistLen} onAdvance={partyTransition} onReveal={partyToReveal} />}
     </>
   );
 }
